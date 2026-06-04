@@ -1,0 +1,40 @@
+import { Router } from "express";
+import authRouter from "./auth.routes";
+import healthRouter from "./health.routes";
+import siteRouter from "./site.routes";
+import slidersRouter from "./sliders.routes";
+import adminSlidersRouter from "./admin.sliders.routes";
+import categoriesRouter from "./categories.routes";
+import adminCategoriesRouter from "./admin.categories.routes";
+import productsRouter from "./products.routes";
+import adminProductsRouter from "./admin.products.routes";
+import quotesRouter from "./quotes.routes";
+import adminQuotesRouter from "./admin.quotes.routes";
+import servicesRouter from "./services.routes";
+import adminServicesRouter from "./admin.services.routes";
+import searchRouter from "./search.routes";
+import adminSiteRouter from "./admin.site.routes";
+import wholesaleRouter from "./wholesale.routes";
+import adminWholesaleRouter from "./admin.wholesale.routes";
+
+const v1Router = Router();
+
+v1Router.use("/health", healthRouter);
+v1Router.use("/site", siteRouter);
+v1Router.use("/auth", authRouter);
+v1Router.use("/sliders", slidersRouter);
+v1Router.use("/admin/sliders", adminSlidersRouter);
+v1Router.use("/categories", categoriesRouter);
+v1Router.use("/admin/categories", adminCategoriesRouter);
+v1Router.use("/products", productsRouter);
+v1Router.use("/admin/products", adminProductsRouter);
+v1Router.use("/quotes", quotesRouter);
+v1Router.use("/admin/quotes", adminQuotesRouter);
+v1Router.use("/services", servicesRouter);
+v1Router.use("/admin/services", adminServicesRouter);
+v1Router.use("/search", searchRouter);
+v1Router.use("/admin/site", adminSiteRouter);
+v1Router.use("/wholesale", wholesaleRouter);
+v1Router.use("/admin/wholesale", adminWholesaleRouter);
+
+export default v1Router;

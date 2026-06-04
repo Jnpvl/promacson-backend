@@ -1,0 +1,22 @@
+node_modules/
+dist/
+data/
+
+# Secrets — keep .env.example in the repo
+.env
+.env.*
+!.env.example
+
+*.sqlite
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+coverage/
+.DS_Store
+
+# Runtime uploads (keep .gitkeep placeholders)
+public/uploads/**
+!public/uploads/**/
+!public/uploads/**/.gitkeep
