@@ -1,0 +1,36 @@
+# Blueprint Render — monorepo: conectar repo y usar "Apply" o crear Web Service con rootDir.
+# Secretos (DB_PASSWORD, JWT_SECRET): definir en el dashboard, no en este archivo.
+services:
+  - type: web
+    name: promacson-api
+    runtime: node
+    rootDir: promacson-backend
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_SYNC
+        value: "false"
+      - key: DB_SSL
+        value: "true"
+      - key: DB_HOST
+        value: aws-1-us-east-1.pooler.supabase.com
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_USER
+        value: postgres.ezongixuraxivexhiqjt
+      - key: DB_NAME
+        value: postgres
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

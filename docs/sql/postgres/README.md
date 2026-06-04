@@ -12,16 +12,20 @@ El backend usa **PostgreSQL** (Supabase). Los scripts en `docs/sql/` (001–010)
 
 En **Settings → Database** copia la connection string (modo **URI**).
 
-Recomendado para el API en producción (pooler, puerto 6543):
+Recomendado en local y producción (**Session pooler**, puerto **5432**):
 
 ```env
-DATABASE_URL=postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+DB_HOST=aws-1-us-east-1.pooler.supabase.com
+DB_PORT=5432
+DB_USER=postgres.[PROJECT-REF]
+DB_PASSWORD="tu-password"
+DB_NAME=postgres
 DB_SSL=true
-DB_SYNC=false
-NODE_ENV=production
 ```
 
-Para migraciones o `db:sync` local, usa la conexión **directa** (puerto 5432) sin pooler.
+Copia host y usuario exactos desde **Dashboard → Database → Connect → Session pooler**.
+
+La URL `db.[REF].supabase.co` (Direct) a veces falla por IPv6; el pooler suele ser más estable.
 
 ## Notas
 

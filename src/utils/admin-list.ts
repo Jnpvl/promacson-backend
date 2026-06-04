@@ -38,7 +38,7 @@ export function parseAdminListParams(query: Request["query"]): AdminListParams {
   if (activeParam === "true" || activeParam === "active") active = "active";
   if (activeParam === "false" || activeParam === "inactive") active = "inactive";
 
-  let status: AdminListParams["status"] = "all";
+  let status: NonNullable<AdminListParams["status"]> = "all";
   const statusParam = typeof query.status === "string" ? query.status : "";
   if (
     statusParam === "NEW" ||

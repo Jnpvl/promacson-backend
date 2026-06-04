@@ -1,4 +1,7 @@
 /*
+  ⚠️ SOLO SQL SERVER (MSSQL). NO ejecutar en Supabase.
+  Para Supabase/PostgreSQL usa: docs/sql/postgres/001-schema.sql
+
   Promacson — creación de base de datos.
 
   Ejecutar conectado a master (o cualquier BD distinta de promacson).

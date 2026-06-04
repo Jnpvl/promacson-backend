@@ -6,18 +6,21 @@ dotenv.config();
 
 function useSsl(): boolean | { rejectUnauthorized: boolean } {
   if (process.env.DB_SSL === "false") return false;
-  if (process.env.DB_SSL === "true" || process.env.DATABASE_URL) {
+  if (process.env.DB_SSL === "true" || process.env.DATABASE_URL || process.env.DB_HOST) {
     return { rejectUnauthorized: false };
   }
   return false;
+}
+
+/** Si hay host o password sueltos, evita armar la URI a mano (caracteres especiales en la clave). */
+function hasDiscreteDbConfig(): boolean {
+  return Boolean(process.env.DB_HOST?.trim() || process.env.DB_PASSWORD !== undefined);
 }
 
 export function buildDataSourceOptions(forceSynchronize?: boolean): DataSourceOptions {
   const synchronize =
     forceSynchronize ??
     (process.env.DB_SYNC === "true" || process.env.NODE_ENV !== "production");
-
-  const databaseUrl = process.env.DATABASE_URL?.trim();
 
   const common = {
     type: "postgres" as const,
@@ -27,6 +30,18 @@ export function buildDataSourceOptions(forceSynchronize?: boolean): DataSourceOp
     ssl: useSsl(),
   };
 
+  if (hasDiscreteDbConfig()) {
+    return {
+      ...common,
+      host: process.env.DB_HOST || "localhost",
+      port: Number(process.env.DB_PORT) || 5432,
+      username: process.env.DB_USER || "postgres",
+      password: process.env.DB_PASSWORD || "",
+      database: process.env.DB_NAME || "postgres",
+    };
+  }
+
+  const databaseUrl = process.env.DATABASE_URL?.trim();
   if (databaseUrl) {
     return {
       ...common,
@@ -36,11 +51,11 @@ export function buildDataSourceOptions(forceSynchronize?: boolean): DataSourceOp
 
   return {
     ...common,
-    host: process.env.DB_HOST || "localhost",
-    port: Number(process.env.DB_PORT) || 5432,
-    username: process.env.DB_USER || "postgres",
-    password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "postgres",
+    host: "localhost",
+    port: 5432,
+    username: "postgres",
+    password: "",
+    database: "postgres",
   };
 }
 
