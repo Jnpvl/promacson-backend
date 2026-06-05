@@ -2,23 +2,20 @@ import { Router } from "express";
 import { sliderController } from "../controllers/slider.controller";
 import { asyncHandler } from "../middlewares/error.middleware";
 import { requireAuth } from "../middlewares/auth.middleware";
-import { sliderImageUpload } from "../middlewares/upload.middleware";
+import { sliderImageUpload } from "../middlewares/image-upload.middleware";
+import { respondWithUploadedImage } from "../utils/upload-response";
 
 const adminSlidersRouter = Router();
 
 adminSlidersRouter.use(requireAuth);
 
 adminSlidersRouter.post("/upload/image", (req, res) => {
-  sliderImageUpload(req, res, (err) => {
+  sliderImageUpload(req, res, async (err) => {
     if (err) {
       const message = err instanceof Error ? err.message : "Error al subir imagen";
       return res.status(400).json({ error: message });
     }
-    if (!req.file) {
-      return res.status(400).json({ error: "No se recibió ninguna imagen" });
-    }
-    const url = `/uploads/sliders/${req.file.filename}`;
-    return res.status(201).json({ url });
+    return respondWithUploadedImage(res, "sliders", req.file);
   });
 });
 

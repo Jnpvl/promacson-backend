@@ -30,4 +30,4 @@ La URL `db.[REF].supabase.co` (Direct) a veces falla por IPv6; el pooler suele s
 ## Notas
 
 - `DB_SYNC=true` solo en desarrollo; en producción usa el SQL de este folder.
-- Las imágenes subidas siguen en `public/uploads/` del servidor; para producción considera Supabase Storage más adelante.
+- Las imágenes en producción deben ir a **Supabase Storage** (`002-storage.sql` + variables `SUPABASE_*` en Render). El disco del PaaS free es efímero.

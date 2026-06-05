@@ -125,9 +125,25 @@ curl -s https://TU-API.onrender.com/
 
 Si falla la conexión a Supabase, revisa `DB_PASSWORD`, `DB_SSL=true` y que el pooler sea **Session** en puerto `5432`.
 
-### Imágenes subidas (`public/uploads/`)
+### Imágenes subidas
 
-El API guarda archivos en disco (`/uploads/...`). En Render/Railway el filesystem es **efímero**: redeploy o reinicio pueden borrar imágenes. Para producción estable conviene migrar después a **Supabase Storage** (u otro object storage) y servir URLs absolutas.
+En **desarrollo local** el API guarda en `public/uploads/` (`/uploads/...`).
+
+En **Render/Railway (plan free)** el disco es **efímero**: cada redeploy, reinicio o spin-down borra archivos subidos. La BD conserva rutas rotas (`404`).
+
+**Solución recomendada:** Supabase Storage.
+
+1. SQL Editor → ejecuta `docs/sql/postgres/002-storage.sql` (bucket público `promacson`).
+2. En Render, añade variables:
+   - `SUPABASE_URL` = Project URL (Settings → API)
+   - `SUPABASE_SERVICE_ROLE_KEY` = service_role (secreto; no el anon key)
+   - `SUPABASE_STORAGE_BUCKET` = `promacson` (opcional si usas ese nombre)
+3. Redeploy del API.
+4. En el admin, **vuelve a subir** sliders, categorías, productos y servicios (las URLs antiguas `/uploads/...` ya no tienen archivo).
+
+Las nuevas URLs serán absolutas (`https://….supabase.co/storage/v1/object/public/promacson/...`) y el front las muestra sin proxy.
+
+Alternativa de pago en Render: [Persistent Disk](https://render.com/docs/disks) montado en `public/uploads` (solo planes de pago).
 
 ### Frontend (Vercel)
 

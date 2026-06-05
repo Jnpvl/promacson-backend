@@ -11,13 +11,14 @@
     "db:sync": "ts-node --transpile-only src/scripts/sync-db.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.107.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.2",
     "morgan": "^1.10.1",
+    "multer": "^2.0.2",
     "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2",
     "typeorm": "^0.3.28"

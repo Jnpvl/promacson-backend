@@ -2,22 +2,20 @@ import { Router } from "express";
 import { serviceController } from "../controllers/service.controller";
 import { asyncHandler } from "../middlewares/error.middleware";
 import { requireAuth } from "../middlewares/auth.middleware";
-import { serviceImageUpload } from "../middlewares/service-upload.middleware";
+import { serviceImageUpload } from "../middlewares/image-upload.middleware";
+import { respondWithUploadedImage } from "../utils/upload-response";
 
 const adminServicesRouter = Router();
 
 adminServicesRouter.use(requireAuth);
 
 adminServicesRouter.post("/upload/image", (req, res) => {
-  serviceImageUpload(req, res, (err) => {
+  serviceImageUpload(req, res, async (err) => {
     if (err) {
       const message = err instanceof Error ? err.message : "Error al subir imagen";
       return res.status(400).json({ error: message });
     }
-    if (!req.file) {
-      return res.status(400).json({ error: "No se recibió ninguna imagen" });
-    }
-    return res.status(201).json({ url: `/uploads/services/${req.file.filename}` });
+    return respondWithUploadedImage(res, "services", req.file);
   });
 });
 

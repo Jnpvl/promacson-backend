@@ -2,22 +2,20 @@ import { Router } from "express";
 import { categoryController } from "../controllers/category.controller";
 import { asyncHandler } from "../middlewares/error.middleware";
 import { requireAuth } from "../middlewares/auth.middleware";
-import { categoryImageUpload } from "../middlewares/category-upload.middleware";
+import { categoryImageUpload } from "../middlewares/image-upload.middleware";
+import { respondWithUploadedImage } from "../utils/upload-response";
 
 const adminCategoriesRouter = Router();
 
 adminCategoriesRouter.use(requireAuth);
 
 adminCategoriesRouter.post("/upload/image", (req, res) => {
-  categoryImageUpload(req, res, (err) => {
+  categoryImageUpload(req, res, async (err) => {
     if (err) {
       const message = err instanceof Error ? err.message : "Error al subir imagen";
       return res.status(400).json({ error: message });
     }
-    if (!req.file) {
-      return res.status(400).json({ error: "No se recibió ninguna imagen" });
-    }
-    return res.status(201).json({ url: `/uploads/categories/${req.file.filename}` });
+    return respondWithUploadedImage(res, "categories", req.file);
   });
 });
 
