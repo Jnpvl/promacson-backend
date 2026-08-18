@@ -23,19 +23,16 @@ export type SiteContactInput = {
 
 const SETTINGS_ID = "default";
 
-function envDefaults(): SiteContactInput {
-  return {
-    phone: process.env.SITE_PHONE || "662 450 1230",
-    phoneE164: process.env.SITE_PHONE_E164 || "+526624501230",
-    email: process.env.SITE_EMAIL || "ventas@promacson.mx",
-    whatsapp: process.env.SITE_WHATSAPP || "526624501230",
-    address:
-      process.env.SITE_ADDRESS ||
-      "C. Benito Juárez 177, Constitución, 83150 Hermosillo, Son.",
-    businessHours: process.env.SITE_BUSINESS_HOURS || null,
-    facebookUrl: process.env.SITE_FACEBOOK_URL || null,
-  };
-}
+/** Valores iniciales si aún no hay fila; el admin los edita en el panel. */
+const INITIAL_CONTACT: SiteContactInput = {
+  phone: "662 450 1230",
+  phoneE164: "+526624501230",
+  email: "ventas@promacson.mx",
+  whatsapp: "526624501230",
+  address: "C. Benito Juárez 177, Constitución, 83150 Hermosillo, Son.",
+  businessHours: null,
+  facebookUrl: null,
+};
 
 function toDto(row: SiteSettings): SiteContactDto {
   return {
@@ -58,16 +55,15 @@ class SiteSettingsService {
     let row = await this.repo().findOne({ where: { id: SETTINGS_ID } });
     if (row) return row;
 
-    const defaults = envDefaults();
     row = this.repo().create({
       id: SETTINGS_ID,
-      phone: defaults.phone,
-      phoneE164: defaults.phoneE164,
-      email: defaults.email,
-      whatsapp: defaults.whatsapp.replace(/\D/g, ""),
-      address: defaults.address ?? null,
-      businessHours: defaults.businessHours ?? null,
-      facebookUrl: defaults.facebookUrl ?? null,
+      phone: INITIAL_CONTACT.phone,
+      phoneE164: INITIAL_CONTACT.phoneE164,
+      email: INITIAL_CONTACT.email,
+      whatsapp: INITIAL_CONTACT.whatsapp.replace(/\D/g, ""),
+      address: INITIAL_CONTACT.address ?? null,
+      businessHours: INITIAL_CONTACT.businessHours ?? null,
+      facebookUrl: INITIAL_CONTACT.facebookUrl ?? null,
     });
     return this.repo().save(row);
   }
