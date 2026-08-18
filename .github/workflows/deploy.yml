@@ -40,7 +40,6 @@ jobs:
           path: release
           retention-days: 3
 
-
   deploy:
     name: Deploy to VM
     needs: build
@@ -56,6 +55,8 @@ jobs:
       - name: Clean deploy staging folder
         shell: powershell
         run: |
+          New-Item -ItemType Directory -Force -Path "C:\deploy\promacson" | Out-Null
+
           Remove-Item "C:\deploy\promacson\*" `
             -Recurse `
             -Force `
@@ -125,16 +126,15 @@ jobs:
         shell: powershell
         working-directory: C:\apps\promacson
         run: |
-          $exists = npx pm2 describe promacson-backend 2>$null
+          cmd /c "npx pm2 describe promacson-backend >NUL 2>&1"
 
           if ($LASTEXITCODE -eq 0) {
-            Write-Host "Reloading existing process..."
+            Write-Host "Backend existente. Recargando..."
             npx pm2 reload promacson-backend --update-env
           }
           else {
-            Write-Host "Starting backend for the first time..."
-            npx pm2 start dist/index.js `
-              --name promacson-backend
+            Write-Host "Primer deploy. Iniciando backend..."
+            npx pm2 start dist/index.js --name promacson-backend
           }
 
           npx pm2 save
