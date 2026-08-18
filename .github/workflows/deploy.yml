@@ -1,10 +1,10 @@
-name: Test VM Runner
+name: Test PM2
 
 on:
   workflow_dispatch:
 
 jobs:
-  test-runner:
+  test-pm2:
     runs-on:
       - self-hosted
       - Windows
@@ -13,17 +13,9 @@ jobs:
     environment: production
 
     steps:
-      - name: Check tools
+      - name: Test PM2 local
         shell: powershell
+        working-directory: C:\apps\promacson
         run: |
-          Write-Host "=== Node ==="
-          where.exe node
-          node --version
-
-          Write-Host "=== NPM ==="
-          where.exe npm
-          npm --version
-
-          Write-Host "=== PM2 ==="
-          where.exe pm2
-          pm2 --version
+          npm install pm2
+          npx pm2 --version
