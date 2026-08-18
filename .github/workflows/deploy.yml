@@ -1,0 +1,19 @@
+name: Deploy test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-runner:
+    runs-on: self-hosted
+    environment: production
+
+    steps:
+      - name: Probar runner
+        run: |
+          echo "Runner funcionando"
+          hostname
+          node --version
+          npm --version
