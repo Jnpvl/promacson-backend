@@ -5,8 +5,7 @@ import { ENTITIES } from "../entities";
 dotenv.config();
 
 function useSsl(): boolean | { rejectUnauthorized: boolean } {
-  if (process.env.DB_SSL === "false") return false;
-  if (process.env.DB_SSL === "true" || process.env.DATABASE_URL || process.env.DB_HOST) {
+  if (process.env.DB_SSL === "true") {
     return { rejectUnauthorized: false };
   }
   return false;
@@ -37,7 +36,7 @@ export function buildDataSourceOptions(forceSynchronize?: boolean): DataSourceOp
       port: Number(process.env.DB_PORT) || 5432,
       username: process.env.DB_USER || "postgres",
       password: process.env.DB_PASSWORD || "",
-      database: process.env.DB_NAME || "postgres",
+      database: process.env.DB_NAME || "promacson",
     };
   }
 
@@ -55,7 +54,7 @@ export function buildDataSourceOptions(forceSynchronize?: boolean): DataSourceOp
     port: 5432,
     username: "postgres",
     password: "",
-    database: "postgres",
+    database: "promacson",
   };
 }
 

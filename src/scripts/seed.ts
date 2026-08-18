@@ -6,26 +6,43 @@ import { User } from "../entities/user.entity";
 
 dotenv.config();
 
-export async function seedAdminUser(): Promise<void> {
+export async function seedAdminUser(email: string, password: string): Promise<void> {
   const userRepo = AppDataSource.getRepository(User);
-  const email = (process.env.ADMIN_EMAIL || "admin@promacson.local").toLowerCase().trim();
-  const password = process.env.ADMIN_PASSWORD || "changeme";
-  const existing = await userRepo.findOne({ where: { email } });
+  const normalizedEmail = email.toLowerCase().trim();
+  const existing = await userRepo.findOne({ where: { email: normalizedEmail } });
 
   if (existing) {
-    console.log(`[seed] Admin user already exists: ${email}`);
+    console.log(`[seed] El usuario ya existe: ${normalizedEmail}`);
     return;
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
   const admin = userRepo.create({
-    email,
+    email: normalizedEmail,
     passwordHash,
     role: "admin",
   });
 
   await userRepo.save(admin);
-  console.log(`[seed] Created default admin user: ${email}`);
+  console.log(`[seed] Admin creado: ${normalizedEmail}`);
+}
+
+function parseArgs(): { email: string; password: string } {
+  const args = process.argv.slice(2).filter((arg) => arg !== "--");
+  const [email, password] = args;
+
+  if (!email || !password) {
+    console.error("Uso: npm run seed -- <email> <password>");
+    process.exit(1);
+  }
+
+  return { email, password };
+}
+
+async function initializeAndSeed(): Promise<void> {
+  const { email, password } = parseArgs();
+  await AppDataSource.initialize();
+  await seedAdminUser(email, password);
 }
 
 if (require.main === module) {
@@ -35,9 +52,4 @@ if (require.main === module) {
       console.error(err);
       process.exit(1);
     });
-}
-
-async function initializeAndSeed(): Promise<void> {
-  await AppDataSource.initialize();
-  await seedAdminUser();
 }

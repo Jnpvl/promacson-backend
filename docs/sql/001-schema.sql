@@ -1,5 +1,5 @@
--- Promacson — esquema PostgreSQL (Supabase)
--- Ejecutar en SQL Editor del proyecto Supabase (todo el archivo).
+-- Promacson — esquema PostgreSQL
+-- Ejecutar contra la base `promacson` (todo el archivo).
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
