@@ -176,7 +176,15 @@ jobs:
       - name: Start or reload backend
         shell: powershell
         working-directory: C:\apps\promacson
+        env:
+          PM2_HOME: C:\apps\promacson\.pm2
         run: |
+          $env:RUNNER_TRACKING_ID = ""
+
+          New-Item -ItemType Directory -Force -Path $env:PM2_HOME | Out-Null
+
+          Write-Host "PM2_HOME = $env:PM2_HOME"
+
           cmd /c "npx pm2 describe promacson-backend >NUL 2>&1"
 
           if ($LASTEXITCODE -eq 0) {
@@ -189,9 +197,12 @@ jobs:
           }
 
           npx pm2 save
+          npx pm2 status
 
       - name: Show PM2 status
         shell: powershell
         working-directory: C:\apps\promacson
+        env:
+          PM2_HOME: C:\apps\promacson\.pm2
         run: |
           npx pm2 status
