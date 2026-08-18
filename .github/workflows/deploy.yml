@@ -49,7 +49,7 @@ jobs:
       - Windows
       - X64
 
-    environment: production
+    environment: promacson-backend
 
     steps:
       - name: Clean deploy staging folder
