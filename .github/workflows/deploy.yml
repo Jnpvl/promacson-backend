@@ -1,10 +1,50 @@
-name: Test PM2
+name: Deploy Promacson Backend
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  test-pm2:
+  build:
+    name: Build backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Prepare release
+        run: |
+          mkdir release
+          cp -r dist release/dist
+          cp package.json release/package.json
+          cp package-lock.json release/package-lock.json
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: promacson-release
+          path: release
+          retention-days: 3
+
+
+  deploy:
+    name: Deploy to VM
+    needs: build
+
     runs-on:
       - self-hosted
       - Windows
@@ -13,9 +53,94 @@ jobs:
     environment: production
 
     steps:
-      - name: Test PM2 local
+      - name: Clean deploy staging folder
+        shell: powershell
+        run: |
+          Remove-Item "C:\deploy\promacson\*" `
+            -Recurse `
+            -Force `
+            -ErrorAction SilentlyContinue
+
+      - name: Download release
+        uses: actions/download-artifact@v4
+        with:
+          name: promacson-release
+          path: C:\deploy\promacson
+
+      - name: Copy release to application folder
+        shell: powershell
+        run: |
+          $AppPath = "C:\apps\promacson"
+          $ReleasePath = "C:\deploy\promacson"
+
+          New-Item -ItemType Directory -Force -Path $AppPath | Out-Null
+
+          Remove-Item "$AppPath\dist" `
+            -Recurse `
+            -Force `
+            -ErrorAction SilentlyContinue
+
+          Copy-Item "$ReleasePath\dist" `
+            "$AppPath\dist" `
+            -Recurse `
+            -Force
+
+          Copy-Item "$ReleasePath\package.json" `
+            "$AppPath\package.json" `
+            -Force
+
+          Copy-Item "$ReleasePath\package-lock.json" `
+            "$AppPath\package-lock.json" `
+            -Force
+
+      - name: Create environment file
+        shell: powershell
+        run: |
+          @"
+          NODE_ENV=${{ vars.NODE_ENV }}
+          PORT=${{ vars.PORT }}
+
+          DB_HOST=${{ vars.DB_HOST }}
+          DB_PORT=${{ vars.DB_PORT }}
+          DB_NAME=${{ vars.DB_NAME }}
+          DB_USER=${{ vars.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES_IN=${{ vars.JWT_EXPIRES_IN }}
+
+          CORS_ORIGIN=${{ vars.CORS_ORIGIN }}
+          "@ | Set-Content `
+            -Path "C:\apps\promacson\.env" `
+            -Encoding UTF8
+
+      - name: Install production dependencies
         shell: powershell
         working-directory: C:\apps\promacson
         run: |
-          npm install pm2
-          npx pm2 --version
+          npm ci --omit=dev
+          npm install pm2 --no-save
+
+      - name: Start or reload backend
+        shell: powershell
+        working-directory: C:\apps\promacson
+        run: |
+          $exists = npx pm2 describe promacson-backend 2>$null
+
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Reloading existing process..."
+            npx pm2 reload promacson-backend --update-env
+          }
+          else {
+            Write-Host "Starting backend for the first time..."
+            npx pm2 start dist/index.js `
+              --name promacson-backend
+          }
+
+          npx pm2 save
+
+      - name: Show PM2 status
+        shell: powershell
+        working-directory: C:\apps\promacson
+        run: |
+          npx pm2 status
