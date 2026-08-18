@@ -1,19 +1,29 @@
-name: Deploy test
+name: Test VM Runner
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   test-runner:
-    runs-on: self-hosted
+    runs-on:
+      - self-hosted
+      - Windows
+      - X64
+
     environment: production
 
     steps:
-      - name: Probar runner
+      - name: Check tools
+        shell: powershell
         run: |
-          echo "Runner funcionando"
-          hostname
+          Write-Host "=== Node ==="
+          where.exe node
           node --version
+
+          Write-Host "=== NPM ==="
+          where.exe npm
           npm --version
+
+          Write-Host "=== PM2 ==="
+          where.exe pm2
+          pm2 --version
