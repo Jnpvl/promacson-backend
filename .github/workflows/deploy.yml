@@ -9,6 +9,7 @@ jobs:
   build:
     name: Build backend
     runs-on: ubuntu-latest
+    environment: promacson-backend
 
     steps:
       - name: Checkout repository
@@ -27,21 +28,51 @@ jobs:
         run: npm run build
 
       - name: Prepare release
+        shell: bash
+        env:
+          NODE_ENV: ${{ vars.NODE_ENV }}
+          PORT: ${{ vars.PORT }}
+          DB_HOST: ${{ vars.DB_HOST }}
+          DB_PORT: ${{ vars.DB_PORT }}
+          DB_NAME: ${{ vars.DB_NAME }}
+          DB_USER: ${{ vars.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES_IN: ${{ vars.JWT_EXPIRES_IN }}
+          CORS_ORIGIN: ${{ vars.CORS_ORIGIN }}
         run: |
-          mkdir release
+          mkdir -p release
+
           cp -r dist release/dist
           cp package.json release/package.json
           cp package-lock.json release/package-lock.json
+
+          cat > release/.env <<EOF
+          NODE_ENV=$NODE_ENV
+          PORT=$PORT
+
+          DB_HOST=$DB_HOST
+          DB_PORT=$DB_PORT
+          DB_NAME=$DB_NAME
+          DB_USER=$DB_USER
+          DB_PASSWORD=$DB_PASSWORD
+
+          JWT_SECRET=$JWT_SECRET
+          JWT_EXPIRES_IN=$JWT_EXPIRES_IN
+
+          CORS_ORIGIN=$CORS_ORIGIN
+          EOF
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
           name: promacson-release
           path: release
+          include-hidden-files: true
           retention-days: 3
 
   deploy:
-    name: Deploy to VM
+    name: Copy release to VM
     needs: build
 
     runs-on:
@@ -49,16 +80,18 @@ jobs:
       - Windows
       - X64
 
-    environment: promacson-backend
-
     steps:
-      - name: Clean deploy staging folder
+      - name: Clean staging folder
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path "C:\deploy\promacson" | Out-Null
 
           Remove-Item "C:\deploy\promacson\*" `
             -Recurse `
+            -Force `
+            -ErrorAction SilentlyContinue
+
+          Remove-Item "C:\deploy\promacson\.env" `
             -Force `
             -ErrorAction SilentlyContinue
 
@@ -94,115 +127,18 @@ jobs:
             "$AppPath\package-lock.json" `
             -Force
 
-      - name: Validate environment configuration
-        shell: powershell
-        env:
-          NODE_ENV: ${{ vars.NODE_ENV }}
-          PORT: ${{ vars.PORT }}
-          DB_HOST: ${{ vars.DB_HOST }}
-          DB_PORT: ${{ vars.DB_PORT }}
-          DB_NAME: ${{ vars.DB_NAME }}
-          DB_USER: ${{ vars.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_EXPIRES_IN: ${{ vars.JWT_EXPIRES_IN }}
-          CORS_ORIGIN: ${{ vars.CORS_ORIGIN }}
-        run: |
-          $required = @(
-            "NODE_ENV",
-            "PORT",
-            "DB_HOST",
-            "DB_PORT",
-            "DB_NAME",
-            "DB_USER",
-            "DB_PASSWORD",
-            "JWT_SECRET",
-            "JWT_EXPIRES_IN",
-            "CORS_ORIGIN"
-          )
-
-          foreach ($name in $required) {
-            $value = [Environment]::GetEnvironmentVariable($name)
-
-            if ([string]::IsNullOrWhiteSpace($value)) {
-              Write-Error "Falta la variable requerida: $name"
-              exit 1
-            }
-
-            if ($name -eq "DB_PASSWORD" -or $name -eq "JWT_SECRET") {
-              Write-Host "$name = configurado"
-            }
-            else {
-              Write-Host "$name = $value"
-            }
-          }
-
-      - name: Create environment file
-        shell: powershell
-        env:
-          NODE_ENV: ${{ vars.NODE_ENV }}
-          PORT: ${{ vars.PORT }}
-          DB_HOST: ${{ vars.DB_HOST }}
-          DB_PORT: ${{ vars.DB_PORT }}
-          DB_NAME: ${{ vars.DB_NAME }}
-          DB_USER: ${{ vars.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_EXPIRES_IN: ${{ vars.JWT_EXPIRES_IN }}
-          CORS_ORIGIN: ${{ vars.CORS_ORIGIN }}
-        run: |
-          @"
-          NODE_ENV=$env:NODE_ENV
-          PORT=$env:PORT
-          DB_HOST=$env:DB_HOST
-          DB_PORT=$env:DB_PORT
-          DB_NAME=$env:DB_NAME
-          DB_USER=$env:DB_USER
-          DB_PASSWORD=$env:DB_PASSWORD
-          JWT_SECRET=$env:JWT_SECRET
-          JWT_EXPIRES_IN=$env:JWT_EXPIRES_IN
-          CORS_ORIGIN=$env:CORS_ORIGIN
-          "@ | Set-Content `
-            -Path "C:\apps\promacson\.env" `
-            -Encoding UTF8
+          Copy-Item "$ReleasePath\.env" `
+            "$AppPath\.env" `
+            -Force
 
       - name: Install production dependencies
         shell: powershell
         working-directory: C:\apps\promacson
         run: |
           npm ci --omit=dev
-          npm install pm2 --no-save
 
-      - name: Start or reload backend
+      - name: Deployment complete
         shell: powershell
-        working-directory: C:\apps\promacson
-        env:
-          PM2_HOME: C:\apps\promacson\.pm2
         run: |
-          $env:RUNNER_TRACKING_ID = ""
-
-          New-Item -ItemType Directory -Force -Path $env:PM2_HOME | Out-Null
-
-          Write-Host "PM2_HOME = $env:PM2_HOME"
-
-          cmd /c "npx pm2 describe promacson-backend >NUL 2>&1"
-
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "Backend existente. Recargando..."
-            npx pm2 reload promacson-backend --update-env
-          }
-          else {
-            Write-Host "Primer deploy. Iniciando backend..."
-            npx pm2 start dist/index.js --name promacson-backend
-          }
-
-          npx pm2 save
-          npx pm2 status
-
-      - name: Show PM2 status
-        shell: powershell
-        working-directory: C:\apps\promacson
-        env:
-          PM2_HOME: C:\apps\promacson\.pm2
-        run: |
-          npx pm2 status
+          Write-Host "Release copiado correctamente a C:\apps\promacson"
+          Write-Host "PM2 no fue modificado."
