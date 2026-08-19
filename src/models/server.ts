@@ -29,7 +29,14 @@ class Server {
     );
 
     this.app.use(express.json());
-    this.app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
+    this.app.use(
+      "/uploads",
+      express.static(path.join(process.cwd(), "public", "uploads"), {
+        maxAge: "365d",
+        immutable: true,
+        etag: true,
+      }),
+    );
   }
 
   router(): void {
