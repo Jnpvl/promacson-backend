@@ -66,7 +66,7 @@ npm run build && npm start
 ## Frontend
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_API_URL=https://jp-enterprise.tail5cbc3e.ts.net
 ```
 
 ## Imágenes

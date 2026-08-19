@@ -36,3 +36,20 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     res.status(401).json({ error: "Token inválido o expirado" });
   }
 }
+
+/** Si hay Bearer, lo valida; si no hay, sigue sin req.auth. */
+export function optionalAuth(req: Request, res: Response, next: NextFunction): void {
+  const header = req.headers.authorization;
+  if (!header?.startsWith("Bearer ")) {
+    next();
+    return;
+  }
+
+  const token = header.slice("Bearer ".length);
+  try {
+    req.auth = jwt.verify(token, jwtSecret()) as AuthPayload;
+    next();
+  } catch {
+    res.status(401).json({ error: "Token inválido o expirado" });
+  }
+}
