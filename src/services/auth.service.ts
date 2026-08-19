@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { Repository } from "typeorm";
 import { AppDataSource } from "../config/database";
-import { User } from "../entities/user.entity";
+import { User, type UserRole } from "../entities/user.entity";
 
 export type AuthUser = {
   id: string;
@@ -58,6 +58,46 @@ export class AuthService {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) return null;
     return { id: user.id, email: user.email, role: user.role };
+  }
+
+  async countUsers(): Promise<number> {
+    return this.userRepository.count();
+  }
+
+  async createUser(
+    email: string,
+    password: string,
+    role: string = "admin",
+  ): Promise<{ ok: true; user: AuthUser } | { ok: false; status: number; error: string }> {
+    const normalizedEmail = email.toLowerCase().trim();
+    if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return { ok: false, status: 400, error: "El correo no es válido" };
+    }
+    if (!password || password.length < 8) {
+      return { ok: false, status: 400, error: "La contraseña debe tener al menos 8 caracteres" };
+    }
+    if (role !== "admin" && role !== "editor") {
+      return { ok: false, status: 400, error: "Rol no válido" };
+    }
+
+    const existing = await this.userRepository.findOne({ where: { email: normalizedEmail } });
+    if (existing) {
+      return { ok: false, status: 409, error: "Ese correo ya está registrado" };
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const saved = await this.userRepository.save(
+      this.userRepository.create({
+        email: normalizedEmail,
+        passwordHash,
+        role: role as UserRole,
+      }),
+    );
+
+    return {
+      ok: true,
+      user: { id: saved.id, email: saved.email, role: saved.role },
+    };
   }
 }
 
