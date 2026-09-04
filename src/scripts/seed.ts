@@ -1,10 +1,10 @@
 import "reflect-metadata";
 import bcrypt from "bcryptjs";
-import dotenv from "dotenv";
+import { loadEnv } from "../config/env";
 import { AppDataSource } from "../config/database";
 import { User } from "../entities/user.entity";
 
-dotenv.config();
+loadEnv();
 
 export async function seedAdminUser(email: string, password: string): Promise<void> {
   const userRepo = AppDataSource.getRepository(User);

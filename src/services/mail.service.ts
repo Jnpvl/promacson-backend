@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { isMailConfigured } from "../config/env";
 
 type MailPayload = {
   subject: string;
@@ -11,15 +12,15 @@ function getMailPass(): string {
   return (process.env.MAIL_PASS || "").replace(/\s+/g, "").trim();
 }
 
-function isMailConfigured(): boolean {
-  return Boolean(process.env.MAIL_USER?.trim() && getMailPass());
-}
-
 function getTransporter() {
+  const port = Number(process.env.MAIL_PORT) || 587;
   return nodemailer.createTransport({
     host: process.env.MAIL_HOST || "smtp.gmail.com",
-    port: Number(process.env.MAIL_PORT) || 587,
-    secure: false,
+    port,
+    secure: port === 465,
+    connectionTimeout: 12_000,
+    greetingTimeout: 12_000,
+    socketTimeout: 12_000,
     auth: {
       user: process.env.MAIL_USER?.trim() ?? "",
       pass: getMailPass(),
@@ -56,11 +57,12 @@ export async function sendNotificationEmail(payload: MailPayload): Promise<void>
     "serviciosmedicosrise@gmail.com";
 
   const transporter = getTransporter();
-  await transporter.sendMail({
-    from: `"Promacson" <${process.env.MAIL_USER}>`,
+  const info = await transporter.sendMail({
+    from: `"Promacson" <${process.env.MAIL_USER?.trim()}>`,
     to,
     subject: payload.subject,
     text: payload.text,
     html: payload.html,
   });
+  console.log(`[mail] Enviado "${payload.subject}" → ${to} (${info.response})`);
 }

@@ -139,7 +139,7 @@ class WholesaleService {
 
     const saved = await this.repo().save(row);
     const dto = toDto(saved);
-    void this.notifyByEmail(dto);
+    await this.notifyByEmail(dto);
     return { ok: true, inquiry: dto };
   }
 
