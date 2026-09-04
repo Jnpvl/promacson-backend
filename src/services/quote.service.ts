@@ -10,6 +10,7 @@ import {
   type AdminListParams,
   type PaginatedResult,
 } from "../utils/admin-list";
+import { mailTableRows, sendNotificationEmail } from "./mail.service";
 
 const QUOTE_STATUSES = new Set<QuoteStatus>(["NEW", "QUOTE_SENT", "PURCHASED"]);
 
@@ -148,7 +149,45 @@ class QuoteService {
 
     const saved = await this.repo().save(quote);
     const loaded = await this.getById(saved.id);
+    if (loaded) void this.notifyByEmail(loaded);
     return { ok: true, quote: loaded! };
+  }
+
+  private async notifyByEmail(quote: QuoteDto): Promise<void> {
+    try {
+      const title = "Promacson - Cotización";
+      const productLines = quote.lines
+        .map((line) => `${line.quantity} × ${line.productName} (${line.saleModeLabel})`)
+        .join("\n");
+
+      const rows: [string, string][] = [
+        ["Folio", quote.folio ?? "—"],
+        ["Nombre", quote.customerName],
+        ...(quote.email ? ([["Correo", quote.email]] as [string, string][]) : []),
+        ...(quote.phone ? ([["Teléfono", quote.phone]] as [string, string][]) : []),
+        ["Productos", productLines || "—"],
+      ];
+
+      const textLines = [
+        title,
+        "",
+        ...rows.map(([label, value]) => `${label}: ${value}`),
+        "",
+        `ID: ${quote.id}`,
+      ];
+
+      await sendNotificationEmail({
+        subject: `${title} — ${quote.customerName}`,
+        text: textLines.join("\n"),
+        html: `
+          <h2>${title}</h2>
+          <table style="border-collapse:collapse">${mailTableRows(rows)}</table>
+          <p style="color:#666;font-size:12px;margin-top:16px">ID: ${quote.id}</p>
+        `,
+      });
+    } catch (err) {
+      console.error("[mail] Error enviando notificación de cotización:", err);
+    }
   }
 
   async listAll(): Promise<QuoteDto[]> {
