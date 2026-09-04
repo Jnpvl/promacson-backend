@@ -10,6 +10,7 @@ import {
   type AdminListParams,
   type PaginatedResult,
 } from "../utils/admin-list";
+import { mailTableRows, sendNotificationEmail } from "./mail.service";
 
 const WHOLESALE_STATUSES = new Set<WholesaleStatus>(["NEW", "CONTACTED", "CLOSED"]);
 
@@ -137,7 +138,46 @@ class WholesaleService {
     });
 
     const saved = await this.repo().save(row);
-    return { ok: true, inquiry: toDto(saved) };
+    const dto = toDto(saved);
+    void this.notifyByEmail(dto);
+    return { ok: true, inquiry: dto };
+  }
+
+  private async notifyByEmail(inquiry: WholesaleDto): Promise<void> {
+    try {
+      const title = "Promacson - mayoreo";
+      const rows: [string, string][] = [
+        ["Folio", inquiry.folio ?? "—"],
+        ["Tipo de cliente", inquiry.clientTypeLabel],
+        ["Institución", inquiry.institution],
+        ["Nombre", inquiry.customerName],
+        ...(inquiry.email ? ([["Correo", inquiry.email]] as [string, string][]) : []),
+        ...(inquiry.phone ? ([["Teléfono", inquiry.phone]] as [string, string][]) : []),
+        ...(inquiry.volume ? ([["Volumen", inquiry.volume]] as [string, string][]) : []),
+        ...(inquiry.interest ? ([["Interés", inquiry.interest]] as [string, string][]) : []),
+        ...(inquiry.message ? ([["Mensaje", inquiry.message]] as [string, string][]) : []),
+      ];
+
+      const textLines = [
+        title,
+        "",
+        ...rows.map(([label, value]) => `${label}: ${value}`),
+        "",
+        `ID: ${inquiry.id}`,
+      ];
+
+      await sendNotificationEmail({
+        subject: `${title} — ${inquiry.customerName}`,
+        text: textLines.join("\n"),
+        html: `
+          <h2>${title}</h2>
+          <table style="border-collapse:collapse">${mailTableRows(rows)}</table>
+          <p style="color:#666;font-size:12px;margin-top:16px">ID: ${inquiry.id}</p>
+        `,
+      });
+    } catch (err) {
+      console.error("[mail] Error enviando notificación de mayoreo:", err);
+    }
   }
 
   async listAdmin(params: AdminListParams): Promise<PaginatedResult<WholesaleDto>> {
