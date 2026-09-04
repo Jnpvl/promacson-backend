@@ -40,6 +40,11 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_EXPIRES_IN: ${{ vars.JWT_EXPIRES_IN }}
           CORS_ORIGIN: ${{ vars.CORS_ORIGIN }}
+          MAIL_HOST: ${{ vars.MAIL_HOST }}
+          MAIL_PORT: ${{ vars.MAIL_PORT }}
+          MAIL_USER: ${{ vars.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          MAIL_TO: ${{ vars.MAIL_TO }}
         run: |
           mkdir -p release
 
@@ -61,6 +66,12 @@ jobs:
           JWT_EXPIRES_IN=$JWT_EXPIRES_IN
 
           CORS_ORIGIN=$CORS_ORIGIN
+
+          MAIL_HOST=$MAIL_HOST
+          MAIL_PORT=$MAIL_PORT
+          MAIL_USER=$MAIL_USER
+          MAIL_PASS=$MAIL_PASS
+          MAIL_TO=$MAIL_TO
           EOF
 
       - name: Upload release artifact

@@ -1,8 +1,8 @@
-import dotenv from "dotenv";
 import { DataSource, type DataSourceOptions } from "typeorm";
 import { ENTITIES } from "../entities";
+import { loadEnv } from "./env";
 
-dotenv.config();
+loadEnv();
 
 function useSsl(): boolean | { rejectUnauthorized: boolean } {
   if (process.env.DB_SSL === "true") {

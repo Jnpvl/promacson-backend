@@ -1,9 +1,9 @@
 import "reflect-metadata";
-import dotenv from "dotenv";
 import { DataSource } from "typeorm";
+import { loadEnv } from "../config/env";
 import { buildDataSourceOptions } from "../config/database";
 
-dotenv.config();
+loadEnv();
 
 async function syncDb() {
   const syncSource = new DataSource(buildDataSourceOptions(true));

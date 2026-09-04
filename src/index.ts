@@ -1,9 +1,9 @@
 import "reflect-metadata";
-import dotenv from "dotenv";
+import { loadEnv, logMailStatus } from "./config/env";
 import Server from "./models/server";
 import { initializeDatabases } from "./config/database";
 
-dotenv.config();
+loadEnv();
 
 async function main() {
   try {
@@ -14,6 +14,7 @@ async function main() {
     process.exit(1);
   }
 
+  logMailStatus();
   const server = new Server();
   server.start();
 }

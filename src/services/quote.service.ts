@@ -149,7 +149,7 @@ class QuoteService {
 
     const saved = await this.repo().save(quote);
     const loaded = await this.getById(saved.id);
-    if (loaded) void this.notifyByEmail(loaded);
+    if (loaded) await this.notifyByEmail(loaded);
     return { ok: true, quote: loaded! };
   }
 
