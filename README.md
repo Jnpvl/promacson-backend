@@ -30,10 +30,11 @@ cp .env.example .env
 | `DB_SYNC` | Solo desarrollo; **no** en el servidor |
 | `JWT_SECRET` | Secreto para firmar tokens |
 | `CORS_ORIGIN` | URL del frontend |
-| `MAIL_HOST` | SMTP (`smtp.gmail.com`) |
-| `MAIL_PORT` | Puerto SMTP (`587`) |
-| `MAIL_USER` | Cuenta Gmail que envía |
-| `MAIL_PASS` | Contraseña de aplicación (sin espacios) |
+| `MAIL_HOST` | SMTP Brevo (`smtp-relay.brevo.com`) |
+| `MAIL_PORT` | Puerto SMTP (`2525` si el server bloquea `587`) |
+| `MAIL_USER` | Login SMTP de Brevo |
+| `MAIL_PASS` | SMTP key de Brevo |
+| `MAIL_FROM` | Remitente verificado en Brevo |
 | `MAIL_TO` | Destino de avisos de cotización y mayoreo |
 
 El teléfono, correo, WhatsApp y dirección **no van en el `.env`**: se editan en el panel (`/admin`).

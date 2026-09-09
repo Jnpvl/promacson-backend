@@ -30,6 +30,15 @@ export function logMailStatus(): void {
     console.warn("[mail] MAIL_USER/MAIL_PASS no configurados; no se enviarán correos");
     return;
   }
-  const to = process.env.MAIL_TO?.trim() || process.env.MAIL_USER?.trim();
-  console.log(`[mail] Avisos de cotización/mayoreo → ${to}`);
+  const to =
+    process.env.MAIL_TO?.trim() ||
+    process.env.MAIL_FROM?.trim() ||
+    process.env.MAIL_USER?.trim();
+  const from =
+    process.env.MAIL_FROM?.trim() ||
+    process.env.MAIL_TO?.trim() ||
+    process.env.MAIL_USER?.trim();
+  console.log(
+    `[mail] Avisos de cotización/mayoreo → ${to} (from ${from}, ${process.env.MAIL_HOST}:${process.env.MAIL_PORT})`,
+  );
 }
