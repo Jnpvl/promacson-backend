@@ -15,7 +15,7 @@ function getMailPass(): string {
 function getTransporter() {
   const port = Number(process.env.MAIL_PORT) || 587;
   return nodemailer.createTransport({
-    host: process.env.MAIL_HOST || "smtp.gmail.com",
+    host: process.env.MAIL_HOST || "smtp-relay.brevo.com",
     port,
     secure: port === 465,
     connectionTimeout: 12_000,
@@ -47,22 +47,41 @@ export function mailTableRows(rows: [string, string][]): string {
 
 export async function sendNotificationEmail(payload: MailPayload): Promise<void> {
   if (!isMailConfigured()) {
-    console.warn("[mail] MAIL_USER/MAIL_PASS no configurados; se omite el envío de correo");
+    console.warn(
+      "[mail] MAIL_USER/MAIL_PASS no configurados; se omite el envío de correo",
+      {
+        host: process.env.MAIL_HOST || null,
+        userSet: Boolean(process.env.MAIL_USER?.trim()),
+        passSet: Boolean(getMailPass()),
+      },
+    );
     return;
   }
 
   const to =
     process.env.MAIL_TO?.trim() ||
-    process.env.MAIL_USER?.trim() ||
+    process.env.MAIL_FROM?.trim() ||
     "serviciosmedicosrise@gmail.com";
+
+  // Brevo: MAIL_USER es el login SMTP; MAIL_FROM debe ser un sender verificado.
+  const fromAddress =
+    process.env.MAIL_FROM?.trim() ||
+    process.env.MAIL_TO?.trim() ||
+    process.env.MAIL_USER?.trim();
 
   const transporter = getTransporter();
   const info = await transporter.sendMail({
-    from: `"Promacson" <${process.env.MAIL_USER?.trim()}>`,
+    from: fromAddress,
     to,
     subject: payload.subject,
     text: payload.text,
     html: payload.html,
   });
-  console.log(`[mail] Enviado "${payload.subject}" → ${to} (${info.response})`);
+  console.log("[mail] Enviado", {
+    to,
+    from: fromAddress,
+    subject: payload.subject,
+    messageId: info.messageId,
+    response: info.response,
+  });
 }
