@@ -67,7 +67,13 @@ export async function sendNotificationEmail(payload: MailPayload): Promise<void>
   const fromAddress =
     process.env.MAIL_FROM?.trim() ||
     process.env.MAIL_TO?.trim() ||
-    process.env.MAIL_USER?.trim();
+    process.env.MAIL_USER?.trim() ||
+    "";
+
+  if (!fromAddress) {
+    console.warn("[mail] MAIL_FROM/MAIL_TO/MAIL_USER vacíos; se omite el envío");
+    return;
+  }
 
   const transporter = getTransporter();
   const info = await transporter.sendMail({
