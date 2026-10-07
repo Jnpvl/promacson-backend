@@ -69,6 +69,20 @@ npm run dev
 npm run build && npm start
 ```
 
+## Despliegue
+
+El despliegue de producción se ejecuta con GitHub Actions en `.github/workflows/deploy.yml` al hacer push a `main` o manualmente desde **Actions > Deploy Promacson Backend > Run workflow**.
+
+El workflow primero valida el proyecto en Ubuntu con Node.js 22 (`npm ci` y `npm run build`). Luego entra por SSH al droplet de DigitalOcean, actualiza `/var/www/promacson` con `git pull --ff-only origin main`, instala dependencias con `npm ci` solo si cambió `package-lock.json` o falta `node_modules`, compila y reinicia PM2 con `pm2 restart promacson --update-env`.
+
+Usa estos secretos del repositorio:
+
+- `DROPLET_HOST`: host o IP del droplet.
+- `DROPLET_USER`: usuario SSH del droplet.
+- `DROPLET_SSH_KEY`: llave privada SSH para acceder al droplet.
+
+El workflow no genera ni sobrescribe `/var/www/promacson/.env`; la configuración real vive en el servidor.
+
 ## Frontend
 
 ```env

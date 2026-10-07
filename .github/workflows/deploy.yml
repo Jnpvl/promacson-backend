@@ -4,21 +4,24 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    name: Build backend
+    name: Build check
     runs-on: ubuntu-latest
-    environment: promacson-backend
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -27,131 +30,94 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Prepare release
-        shell: bash
-        env:
-          NODE_ENV: ${{ vars.NODE_ENV }}
-          PORT: ${{ vars.PORT }}
-          DB_HOST: ${{ vars.DB_HOST }}
-          DB_PORT: ${{ vars.DB_PORT }}
-          DB_NAME: ${{ vars.DB_NAME }}
-          DB_USER: ${{ vars.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          JWT_EXPIRES_IN: ${{ vars.JWT_EXPIRES_IN }}
-          CORS_ORIGIN: ${{ vars.CORS_ORIGIN }}
-          MAIL_HOST: ${{ vars.MAIL_HOST }}
-          MAIL_PORT: ${{ vars.MAIL_PORT }}
-          MAIL_USER: ${{ vars.MAIL_USER }}
-          MAIL_PASS: ${{ secrets.MAIL_PASS }}
-          MAIL_FROM: ${{ vars.MAIL_FROM }}
-          MAIL_TO: ${{ vars.MAIL_TO }}
-        run: |
-          mkdir -p release
-
-          cp -r dist release/dist
-          cp package.json release/package.json
-          cp package-lock.json release/package-lock.json
-
-          cat > release/.env <<EOF
-          NODE_ENV=$NODE_ENV
-          PORT=$PORT
-
-          DB_HOST=$DB_HOST
-          DB_PORT=$DB_PORT
-          DB_NAME=$DB_NAME
-          DB_USER=$DB_USER
-          DB_PASSWORD=$DB_PASSWORD
-
-          JWT_SECRET=$JWT_SECRET
-          JWT_EXPIRES_IN=$JWT_EXPIRES_IN
-
-          CORS_ORIGIN=$CORS_ORIGIN
-
-          MAIL_HOST=$MAIL_HOST
-          MAIL_PORT=$MAIL_PORT
-          MAIL_USER=$MAIL_USER
-          MAIL_PASS=$MAIL_PASS
-          MAIL_FROM=$MAIL_FROM
-          MAIL_TO=$MAIL_TO
-          EOF
-
-      - name: Upload release artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: promacson-release
-          path: release
-          include-hidden-files: true
-          retention-days: 3
-
   deploy:
-    name: Copy release to VM
+    name: Deploy to DigitalOcean
     needs: build
-
-    runs-on:
-      - self-hosted
-      - Windows
-      - X64
+    runs-on: ubuntu-latest
+    concurrency:
+      group: promacson-backend-production-deploy
+      cancel-in-progress: false
 
     steps:
-      - name: Clean staging folder
-        shell: powershell
+      - name: Configure SSH
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
         run: |
-          New-Item -ItemType Directory -Force -Path "C:\deploy\promacson" | Out-Null
+          set -euo pipefail
 
-          Remove-Item "C:\deploy\promacson\*" `
-            -Recurse `
-            -Force `
-            -ErrorAction SilentlyContinue
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
 
-          Remove-Item "C:\deploy\promacson\.env" `
-            -Force `
-            -ErrorAction SilentlyContinue
+          printf '%s\n' "$DROPLET_SSH_KEY" > ~/.ssh/promacson_deploy_key
+          chmod 600 ~/.ssh/promacson_deploy_key
 
-      - name: Download release
-        uses: actions/download-artifact@v4
-        with:
-          name: promacson-release
-          path: C:\deploy\promacson
+          ssh-keyscan -H "$DROPLET_HOST" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
-      - name: Copy release to application folder
-        shell: powershell
+      - name: Deploy on droplet
+        env:
+          DROPLET_HOST: ${{ secrets.DROPLET_HOST }}
+          DROPLET_USER: ${{ secrets.DROPLET_USER }}
         run: |
-          $AppPath = "C:\apps\promacson"
-          $ReleasePath = "C:\deploy\promacson"
+          set -euo pipefail
 
-          New-Item -ItemType Directory -Force -Path $AppPath | Out-Null
+          ssh -i ~/.ssh/promacson_deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "$DROPLET_USER@$DROPLET_HOST" 'bash -se' <<'EOF'
+          set -euo pipefail
 
-          Remove-Item "$AppPath\dist" `
-            -Recurse `
-            -Force `
-            -ErrorAction SilentlyContinue
+          cd /var/www/promacson
 
-          Copy-Item "$ReleasePath\dist" `
-            "$AppPath\dist" `
-            -Recurse `
-            -Force
+          old_lock_hash=""
+          if [ -f package-lock.json ]; then
+            old_lock_hash="$(sha256sum package-lock.json | awk '{print $1}')"
+          fi
 
-          Copy-Item "$ReleasePath\package.json" `
-            "$AppPath\package.json" `
-            -Force
+          git pull --ff-only origin main
 
-          Copy-Item "$ReleasePath\package-lock.json" `
-            "$AppPath\package-lock.json" `
-            -Force
+          new_lock_hash=""
+          if [ -f package-lock.json ]; then
+            new_lock_hash="$(sha256sum package-lock.json | awk '{print $1}')"
+          fi
 
-          Copy-Item "$ReleasePath\.env" `
-            "$AppPath\.env" `
-            -Force
+          if [ ! -d node_modules ] || [ "$old_lock_hash" != "$new_lock_hash" ]; then
+            npm ci
+          else
+            echo "package-lock.json unchanged and node_modules present; skipping npm ci."
+          fi
 
-      - name: Install production dependencies
-        shell: powershell
-        working-directory: C:\apps\promacson
+          npm run build
+          pm2 restart promacson --update-env
+          EOF
+
+      - name: Health check
         run: |
-          npm ci --omit=dev
+          set -euo pipefail
 
-      - name: Deployment complete
-        shell: powershell
-        run: |
-          Write-Host "Release copiado correctamente a C:\apps\promacson"
-          Write-Host "PM2 no fue modificado."
+          url="https://api.promacsontienda.com/api/v1/health"
+          body_file="$(mktemp)"
+
+          for attempt in $(seq 1 10); do
+            echo "Health check attempt ${attempt}/10..."
+
+            status="$(curl -sS -o "$body_file" -w '%{http_code}' "$url" || true)"
+            body="$(cat "$body_file")"
+            compact_body="$(printf '%s' "$body" | tr -d '[:space:]')"
+
+            printf '%s\n' "$body"
+
+            if [ "$status" = "200" ] && [[ "$compact_body" == *'"status":"ok"'* ]]; then
+              echo "Health check passed."
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 10 ]; then
+              echo "Expected HTTP 200 with status ok; retrying in 3 seconds."
+              sleep 3
+            fi
+          done
+
+          echo "Health check failed after 10 attempts."
+          exit 1
